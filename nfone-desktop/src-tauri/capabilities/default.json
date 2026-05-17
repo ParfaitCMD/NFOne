@@ -7,10 +7,9 @@
   ],
   "permissions": [
     "core:default",
+    "opener:default",
     "dialog:default",
     "fs:default",
-    "fs:allow-write-file",
-    "fs:allow-document-write",
-    "fs:allow-desktop-write"
+    "deep-link:default"
   ]
 }

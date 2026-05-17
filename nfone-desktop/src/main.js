@@ -1,19 +1,17 @@
 // src/main.js
 import { db } from "./db.js";
-import { save } from "https://esm.sh/@tauri-apps/plugin-dialog";
-import { writeFile } from "https://esm.sh/@tauri-apps/plugin-fs";
+import { supabase } from "./auth.js";
 import { LOGO_WSE_BASE64 } from "./assets.js";
 
-// IMPORTANDO AS TELAS ISOLADAS DE FORMA LIMPA:
+import { renderizarTelaLogin } from "./login.js";
 import { renderizarTelaDashboard } from "./dashboard.js";
 import { renderizarTelaCatalogo } from "./catalogo.js";
 import { renderizarTelaOrdemServico } from "./ordemdeservico.js";
-import { renderizarTelaAgenda } from "./agenda.js"; // <- IMPORTAÇÃO DA AGENDA NOVA
+import { renderizarTelaAgenda } from "./agenda.js";
 
 const appContainer = document.getElementById("app-container");
 const tituloModulo = document.getElementById("titulo-modulo");
 
-// FUNÇÃO PADRÃO PARA GERAR O PRÓXIMO NÚMERO SEQUENCIAL UNIFICADO
 async function pegarProximoNumeroNotaUnificado() {
   const notas = await db.notas.toArray();
   if (notas.length === 0) return "001";
@@ -94,84 +92,79 @@ window.carregarTela = function (tela) {
         const numeroNotaFormatado = "#" + proximoNumeroSequencial;
 
         const htmlDaNota = `
-        <div class="pdf-wrapper">
-            <style>
-                .pdf-wrapper { font-family: Helvetica, Arial, sans-serif; padding: 40px; color: #000; background: #FFF; width: 750px; position: relative; box-sizing: border-box; }
-                .logo-header { position: absolute; top: 30px; left: 30px; width: 80px; height: 80px; object-fit: contain; }
-                .date { text-align: right; font-size: 14px; margin-bottom: 20px; }
-                .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; margin-top: 30px; }
-                .header h1 { margin: 0; font-size: 26px; }
-                .section { margin-bottom: 20px; }
-                .section-title { background-color: #f0f0f0; padding: 8px; font-weight: bold; border-left: 4px solid #333; margin-bottom: 10px; font-size: 12px; }
-                .row { margin-bottom: 4px; font-size: 13px; }
-                .bold { font-weight: bold; }
-                .total-box { margin-top: 20px; padding: 15px; border: 2px solid #000; text-align: right; font-size: 18px; font-weight: bold; }
-                .desc-box { border: 1px solid #ccc; padding: 10px; min-height: 80px; font-size: 13px; white-space: pre-wrap; margin-bottom: 10px; }
-                .footer { margin-top: 40px; text-align: center; font-size: 11px; border-top: 1px solid #ccc; padding-top: 10px; }
-            </style>
+      <div class="pdf-wrapper">
+          <style>
+              .pdf-wrapper { font-family: Helvetica, Arial, sans-serif; padding: 40px; color: #000; background: #FFF; width: 750px; position: relative; box-sizing: border-box; }
+              .logo-header { position: absolute; top: 30px; left: 30px; width: 80px; height: 80px; object-fit: contain; }
+              .date { text-align: right; font-size: 14px; margin-bottom: 20px; }
+              .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; margin-top: 30px; }
+              .header h1 { margin: 0; font-size: 26px; }
+              .section { margin-bottom: 20px; }
+              .section-title { background-color: #f0f0f0; padding: 8px; font-weight: bold; border-left: 4px solid #333; margin-bottom: 10px; font-size: 12px; }
+              .row { margin-bottom: 4px; font-size: 13px; }
+              .bold { font-weight: bold; }
+              .total-box { margin-top: 20px; padding: 15px; border: 2px solid #000; text-align: right; font-size: 18px; font-weight: bold; }
+              .desc-box { border: 1px solid #ccc; padding: 10px; min-height: 80px; font-size: 13px; white-space: pre-wrap; margin-bottom: 10px; }
+              .footer { margin-top: 40px; text-align: center; font-size: 11px; border-top: 1px solid #ccc; padding-top: 10px; }
+          </style>
 
-            ${LOGO_WSE_BASE64 ? `<img src="${LOGO_WSE_BASE64}" class="logo-header" />` : ""}
-            
-            <div class="date"><span class="bold">Data de Entrega:</span> ${data}</div>
-            <div class="header">
-                <h1>WSE Bombas e Motores</h1>
-                <h3>Nota de Prestação de Serviço</h3>
-                <div style="font-size: 14px; margin-top: 5px; font-weight: bold; color: #333;">N/D/N: ${numeroNotaFormatado}</div>
-            </div>
+          ${LOGO_WSE_BASE64 ? `<img src="${LOGO_WSE_BASE64}" class="logo-header" />` : ""}
+          
+          <div class="date"><span class="bold">Data de Entrega:</span> ${data}</div>
+          <div class="header">
+              <h1>WSE Bombas e Motores</h1>
+              <h3>Nota de Prestação de Serviço</h3>
+              <div style="font-size: 14px; margin-top: 5px; font-weight: bold; color: #333;">N/D/N: ${numeroNotaFormatado}</div>
+          </div>
 
-            <div class="section">
-                <div class="section-title">IDENTIFICAÇÃO DO PRESTADOR</div>
-                <div class="row"><span class="bold">Razão Social:</span> WSE BOMBAS E MOTORES ELETRICOS LTDA</div>
-                <div class="row"><span class="bold">Nome Fantasia:</span> WSE BOMBAS E MOTORES ELETRICOS</div>
-                <div class="row"><span class="bold">CNPJ:</span> 58.054.890/0001-02</div>
-                <div class="row"><span class="bold">Localidade:</span> Brasília - Distrito Federal | Brasil</div>
-                <div class="row"><span class="bold">E-mail:</span> wsebombas@gmail.com</div>
-            </div>
+          <div class="section">
+              <div class="section-title">IDENTIFICAÇÃO DO PRESTADOR</div>
+              <div class="row"><span class="bold">Razão Social:</span> WSE BOMBAS E MOTORES ELETRICOS LTDA</div>
+              <div class="row"><span class="bold">Nome Fantasia:</span> WSE BOMBAS E MOTORES ELETRICOS</div>
+              <div class="row"><span class="bold">CNPJ:</span> 58.054.890/0001-02</div>
+              <div class="row"><span class="bold">Localidade:</span> Brasília - Distrito Federal | Brasil</div>
+              <div class="row"><span class="bold">E-mail:</span> wsebombas@gmail.com</div>
+          </div>
 
-            <div class="section">
-                <div class="section-title">DADOS DO TOMADOR (CLIENTE)</div>
-                <div class="row"><span class="bold">Nome/Razão Social:</span> ${cliente}</div>
-                <div class="row"><span class="bold">CNPJ:</span> ${cnpj}</div>
-                <div class="row"><span class="bold">Endereço:</span> ${endereco}</div>
-            </div>
+          <div class="section">
+              <div class="section-title">DADOS DO TOMADOR (CLIENTE)</div>
+              <div class="row"><span class="bold">Nome/Razão Social:</span> ${cliente}</div>
+              <div class="row"><span class="bold">CNPJ:</span> ${cnpj}</div>
+              <div class="row"><span class="bold">Endereço:</span> ${endereco}</div>
+          </div>
 
-            <div class="section">
-                <div class="section-title">DETALHES DO TRABALHO</div>
-                <div class="row"><span class="bold">Equipamento:</span> ${equipamento} | <span class="bold">TAG:</span> ${tag}</div>
-                <div class="row"><span class="bold">Potência:</span> ${potencia} | <span class="bold">Tributação:</span> 14.01.01 - Manutenção de maquinário</div>
-                <div class="row"><span class="bold">Forma de Recebimento:</span> ${forma}</div>
-                <div style="margin-top: 10px;">
-                    <div class="bold">Descrição dos Serviços:</div>
-                    <div class="desc-box">${desc}</div>
-                </div>
-            </div>
+          <div class="section">
+              <div class="section-title">DETALHES DO TRABALHO</div>
+              <div class="row"><span class="bold">Equipamento:</span> ${equipamento} | <span class="bold">TAG:</span> ${tag}</div>
+              <div class="row"><span class="bold">Potência:</span> ${potencia} | <span class="bold">Tributação:</span> 14.01.01 - Manutenção de maquinário</div>
+              <div class="row"><span class="bold">Forma de Recebimento:</span> ${forma}</div>
+              <div style="margin-top: 10px;">
+                  <div class="bold">Descrição dos Serviços:</div>
+                  <div class="desc-box">${desc}</div>
+              </div>
+          </div>
 
-            <div class="section">
-                <div class="section-title">TRIBUTAÇÃO NACIONAL</div>
-                <div class="row"><span class="bold">CST:</span> Nenhum</div>
-                <div class="row"><span class="bold">Tipo de Retenção:</span> PIS/COFINS/CSLL Não Retidos</div>
-                <div class="row">
-                    <span class="bold">Vl. PIS:</span> - | <span class="bold">Vl. COFINS:</span> - | <span class="bold">Vl. CSLL:</span> -
-                </div>
-                <div class="row">
-                    <span class="bold">Vl. IRRF:</span> - | <span class="bold">Vl. CP Retido:</span> -
-                </div>
-            </div>
+          <div class="total-box">Valor Total: R$ ${valor}</div>
 
-            <div class="total-box">Valor Total: R$ ${valor}</div>
-
-            <div class="footer">
-                <span class="bold">WSE BOMBAS E MOTORES ELÉTRICOS</span><br/>
-                CNPJ: 58.054.890/0001-02 | Contato: (61) 99800-7873
-            </div>
-        </div>
+          <div class="footer">
+              <span class="bold">WSE BOMBAS E MOTORES ELÉTRICOS</span><br/>
+              CNPJ: 58.054.890/0001-02 | Contato: (61) 99800-7873
+          </div>
+      </div>
       `;
 
         try {
-          const caminhoArquivo = await save({
-            filters: [{ name: "Documento PDF", extensions: ["pdf"] }],
-            defaultPath: `Nota_WSE_${proximoNumeroSequencial}_${cliente.replace(/\s+/g, "_")}.pdf`,
-          });
+          if (!window.__TAURI__)
+            throw new Error("API Nativa do Tauri não encontrada.");
+
+          // CHAMADA NATIVA PARA ABRIR O DIÁLOGO DE SALVAR
+          const caminhoArquivo = await window.__TAURI__.core.invoke(
+            "plugin:dialog|save",
+            {
+              filters: [{ name: "Documento PDF", extensions: ["pdf"] }],
+              defaultPath: `Nota_WSE_${proximoNumeroSequencial}_${cliente.replace(/\s+/g, "_")}.pdf`,
+            },
+          );
 
           if (!caminhoArquivo) return;
 
@@ -191,7 +184,12 @@ window.carregarTela = function (tela) {
             .outputPdf("arraybuffer");
 
           const uint8Array = new Uint8Array(pdfArrayBuffer);
-          await writeFile(caminhoArquivo, uint8Array);
+
+          // CHAMADA NATIVA PARA ESCREVER O ARQUIVO NO HD
+          await window.__TAURI__.core.invoke("plugin:fs|write", {
+            path: caminhoArquivo,
+            data: Array.from(uint8Array),
+          });
 
           await db.notas.add({
             numero: numeroNotaFormatado,
@@ -206,7 +204,9 @@ window.carregarTela = function (tela) {
             .forEach((input) => (input.value = ""));
         } catch (erro) {
           console.error("Erro ao gerar o PDF:", erro);
-          alert("Ocorreu um erro interno ao compilar ou salvar o arquivo PDF.");
+          alert(
+            "Ocorreu um erro interno ao compilar ou salvar o arquivo PDF. Verifique se a API global está ativada.",
+          );
         }
       });
   } else if (tela === "catalogo") {
@@ -214,11 +214,19 @@ window.carregarTela = function (tela) {
   } else if (tela === "logistica") {
     renderizarTelaOrdemServico();
   } else if (tela === "agenda") {
-    // REDIRECIONA PARA O NOVO ARQUIVO DE AGENDA
     tituloModulo.innerText = "Agenda Corporativa";
     renderizarTelaAgenda();
   }
 };
+
+document.querySelector(".logout-btn").addEventListener("click", async () => {
+  if (confirm("Deseja desconectar e sair do sistema?")) {
+    if (supabase) await supabase.auth.signOut();
+    renderizarTelaLogin(() => {
+      carregarTela("dashboard");
+    });
+  }
+});
 
 document
   .getElementById("btn-dashboard")
@@ -232,9 +240,37 @@ document
 document
   .getElementById("btn-logistica")
   .addEventListener("click", () => carregarTela("logistica"));
-// ADICIONA O OUVINTE DE CLIQUE DO BOTÃO NOVO:
 document
   .getElementById("btn-agenda")
   .addEventListener("click", () => carregarTela("agenda"));
 
-carregarTela("dashboard");
+async function inicializarFluxoDeAcesso() {
+  try {
+    if (!supabase) throw new Error("Dependência do Supabase Offline");
+
+    const { data, error } = await supabase.auth.getSession();
+    if (error) console.error(error);
+
+    if (data && data.session) {
+      const sidebarDOM = document.querySelector(".sidebar");
+      const topHeaderDOM = document.querySelector(".top-header");
+
+      if (sidebarDOM) sidebarDOM.style.display = "flex";
+      if (topHeaderDOM) topHeaderDOM.style.display = "flex";
+
+      carregarTela("dashboard");
+      return;
+    }
+
+    renderizarTelaLogin(() => {
+      carregarTela("dashboard");
+    });
+  } catch (err) {
+    console.warn("Módulo de autenticação interrompido:", err);
+    renderizarTelaLogin(() => {
+      carregarTela("dashboard");
+    });
+  }
+}
+
+inicializarFluxoDeAcesso();

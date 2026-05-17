@@ -5,7 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NFOne - WSE</title>
     <link rel="stylesheet" href="styles.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <script>
+      window.addEventListener("error", function (e) {
+        if (document.body) {
+          document.body.innerHTML =
+            '<div style="background:#dc2626; color:white; padding:30px; box-sizing:border-box; width:100%; min-height:100vh; font-family:sans-serif; position:absolute; top:0; left:0; z-index:99999;"><h2>Erro Fatal no JS:</h2><p>' +
+            e.message +
+            "</p><p><strong>Arquivo:</strong> " +
+            e.filename +
+            ":" +
+            e.lineno +
+            "</p></div>";
+        } else {
+          console.error("Erro Crítico:", e.message);
+        }
+      });
+      window.addEventListener("unhandledrejection", function (e) {
+        if (document.body) {
+          document.body.innerHTML =
+            '<div style="background:#ea580c; color:white; padding:30px; box-sizing:border-box; width:100%; min-height:100vh; font-family:sans-serif; position:absolute; top:0; left:0; z-index:99999;"><h2>Erro de Execução:</h2><p>' +
+            (e.reason && e.reason.message ? e.reason.message : e.reason) +
+            "</p></div>";
+        }
+      });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"
+      crossorigin="anonymous"
+    ></script>
   </head>
   <body>
     <aside class="sidebar">
