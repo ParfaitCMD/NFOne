@@ -1,0 +1,240 @@
+// src/main.js
+import { db } from "./db.js";
+import { save } from "https://esm.sh/@tauri-apps/plugin-dialog";
+import { writeFile } from "https://esm.sh/@tauri-apps/plugin-fs";
+import { LOGO_WSE_BASE64 } from "./assets.js";
+
+// IMPORTANDO AS TELAS ISOLADAS DE FORMA LIMPA:
+import { renderizarTelaDashboard } from "./dashboard.js";
+import { renderizarTelaCatalogo } from "./catalogo.js";
+import { renderizarTelaOrdemServico } from "./ordemdeservico.js";
+import { renderizarTelaAgenda } from "./agenda.js"; // <- IMPORTAÇÃO DA AGENDA NOVA
+
+const appContainer = document.getElementById("app-container");
+const tituloModulo = document.getElementById("titulo-modulo");
+
+// FUNÇÃO PADRÃO PARA GERAR O PRÓXIMO NÚMERO SEQUENCIAL UNIFICADO
+async function pegarProximoNumeroNotaUnificado() {
+  const notas = await db.notas.toArray();
+  if (notas.length === 0) return "001";
+
+  const numerosConvertidos = notas.map((n) => {
+    let numLimpo = n.numero ? n.numero.replace("#", "") : "0";
+    return parseInt(numLimpo, 10) || 0;
+  });
+
+  const maiorNumero = Math.max(...numerosConvertidos);
+  const proximo = maiorNumero + 1;
+  return String(proximo).padStart(3, "0");
+}
+
+window.carregarTela = function (tela) {
+  document
+    .querySelectorAll(".menu-item")
+    .forEach((btn) => btn.classList.remove("active"));
+  const btnAtivo = document.getElementById(`btn-${tela}`);
+  if (btnAtivo) btnAtivo.classList.add("active");
+
+  if (tela === "dashboard") {
+    tituloModulo.innerText = "Dashboard";
+    renderizarTelaDashboard();
+  } else if (tela === "faturamento") {
+    tituloModulo.innerText = "Faturamento";
+    appContainer.innerHTML = `
+      <h2>Gerar Nota Fiscal</h2>
+      <div class="card-form faturamento-largura">
+        <span class="section-label">Dados do Cliente (Tomador)</span>
+        <input type="text" id="cli-nome" class="input-field" placeholder="Nome / Razão Social do Cliente" style="width: 100%; margin-bottom: 15px;">
+        
+        <div class="form-row">
+          <input type="text" id="cli-cnpj" class="input-field" placeholder="CNPJ do Cliente">
+          <input type="text" id="cli-data" class="input-field" placeholder="Data de Entrega (DD/MM/AAAA)">
+        </div>
+        
+        <input type="text" id="cli-endereco" class="input-field" placeholder="Endereço Completo do Cliente" style="width: 100%;">
+
+        <span class="section-label">Detalhes Técnicos do Trabalho</span>
+        <div class="form-row">
+          <input type="text" id="tec-equip" class="input-field" placeholder="Equipamento (Ex: Bomba de Água)">
+          <input type="text" id="tec-tag" class="input-field" placeholder="TAG / Identificação">
+        </div>
+        
+        <div class="form-row">
+          <input type="text" id="tec-potencia" class="input-field" placeholder="Potência (Ex: 5.0 CV)">
+          <input type="text" id="tec-forma" class="input-field" placeholder="Forma de Recebimento (Ex: Boleto, Pix)">
+        </div>
+
+        <textarea id="tec-desc" class="input-field" placeholder="Descrição Detalhada dos Serviços Prestados" style="width: 100%; height: 90px; resize: none; margin-bottom: 15px;"></textarea>
+        
+        <input type="text" id="tec-valor" class="input-field" placeholder="Valor Total (Ex: 3130,00)" style="width: 100%;">
+
+        <button id="btn-generar-pdf" class="btn-primary">GERAR PDF WSE</button>
+      </div>
+    `;
+
+    document
+      .getElementById("btn-generar-pdf")
+      .addEventListener("click", async () => {
+        const cliente =
+          document.getElementById("cli-nome").value ||
+          "Cliente_Nao_Identificado";
+        const cnpj = document.getElementById("cli-cnpj").value || "-";
+        const data = document.getElementById("cli-data").value || "-";
+        const endereco = document.getElementById("cli-endereco").value || "-";
+        const equipamento = document.getElementById("tec-equip").value || "-";
+        const tag = document.getElementById("tec-tag").value || "-";
+        const potencia = document.getElementById("tec-potencia").value || "-";
+        const forma = document.getElementById("tec-forma").value || "-";
+        const desc =
+          document.getElementById("tec-desc").value ||
+          "Nenhuma descrição fornecida.";
+        const valor = document.getElementById("tec-valor").value || "0,00";
+
+        const proximoNumeroSequencial = await pegarProximoNumeroNotaUnificado();
+        const numeroNotaFormatado = "#" + proximoNumeroSequencial;
+
+        const htmlDaNota = `
+        <div class="pdf-wrapper">
+            <style>
+                .pdf-wrapper { font-family: Helvetica, Arial, sans-serif; padding: 40px; color: #000; background: #FFF; width: 750px; position: relative; box-sizing: border-box; }
+                .logo-header { position: absolute; top: 30px; left: 30px; width: 80px; height: 80px; object-fit: contain; }
+                .date { text-align: right; font-size: 14px; margin-bottom: 20px; }
+                .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; margin-top: 30px; }
+                .header h1 { margin: 0; font-size: 26px; }
+                .section { margin-bottom: 20px; }
+                .section-title { background-color: #f0f0f0; padding: 8px; font-weight: bold; border-left: 4px solid #333; margin-bottom: 10px; font-size: 12px; }
+                .row { margin-bottom: 4px; font-size: 13px; }
+                .bold { font-weight: bold; }
+                .total-box { margin-top: 20px; padding: 15px; border: 2px solid #000; text-align: right; font-size: 18px; font-weight: bold; }
+                .desc-box { border: 1px solid #ccc; padding: 10px; min-height: 80px; font-size: 13px; white-space: pre-wrap; margin-bottom: 10px; }
+                .footer { margin-top: 40px; text-align: center; font-size: 11px; border-top: 1px solid #ccc; padding-top: 10px; }
+            </style>
+
+            ${LOGO_WSE_BASE64 ? `<img src="${LOGO_WSE_BASE64}" class="logo-header" />` : ""}
+            
+            <div class="date"><span class="bold">Data de Entrega:</span> ${data}</div>
+            <div class="header">
+                <h1>WSE Bombas e Motores</h1>
+                <h3>Nota de Prestação de Serviço</h3>
+                <div style="font-size: 14px; margin-top: 5px; font-weight: bold; color: #333;">N/D/N: ${numeroNotaFormatado}</div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">IDENTIFICAÇÃO DO PRESTADOR</div>
+                <div class="row"><span class="bold">Razão Social:</span> WSE BOMBAS E MOTORES ELETRICOS LTDA</div>
+                <div class="row"><span class="bold">Nome Fantasia:</span> WSE BOMBAS E MOTORES ELETRICOS</div>
+                <div class="row"><span class="bold">CNPJ:</span> 58.054.890/0001-02</div>
+                <div class="row"><span class="bold">Localidade:</span> Brasília - Distrito Federal | Brasil</div>
+                <div class="row"><span class="bold">E-mail:</span> wsebombas@gmail.com</div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">DADOS DO TOMADOR (CLIENTE)</div>
+                <div class="row"><span class="bold">Nome/Razão Social:</span> ${cliente}</div>
+                <div class="row"><span class="bold">CNPJ:</span> ${cnpj}</div>
+                <div class="row"><span class="bold">Endereço:</span> ${endereco}</div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">DETALHES DO TRABALHO</div>
+                <div class="row"><span class="bold">Equipamento:</span> ${equipamento} | <span class="bold">TAG:</span> ${tag}</div>
+                <div class="row"><span class="bold">Potência:</span> ${potencia} | <span class="bold">Tributação:</span> 14.01.01 - Manutenção de maquinário</div>
+                <div class="row"><span class="bold">Forma de Recebimento:</span> ${forma}</div>
+                <div style="margin-top: 10px;">
+                    <div class="bold">Descrição dos Serviços:</div>
+                    <div class="desc-box">${desc}</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">TRIBUTAÇÃO NACIONAL</div>
+                <div class="row"><span class="bold">CST:</span> Nenhum</div>
+                <div class="row"><span class="bold">Tipo de Retenção:</span> PIS/COFINS/CSLL Não Retidos</div>
+                <div class="row">
+                    <span class="bold">Vl. PIS:</span> - | <span class="bold">Vl. COFINS:</span> - | <span class="bold">Vl. CSLL:</span> -
+                </div>
+                <div class="row">
+                    <span class="bold">Vl. IRRF:</span> - | <span class="bold">Vl. CP Retido:</span> -
+                </div>
+            </div>
+
+            <div class="total-box">Valor Total: R$ ${valor}</div>
+
+            <div class="footer">
+                <span class="bold">WSE BOMBAS E MOTORES ELÉTRICOS</span><br/>
+                CNPJ: 58.054.890/0001-02 | Contato: (61) 99800-7873
+            </div>
+        </div>
+      `;
+
+        try {
+          const caminhoArquivo = await save({
+            filters: [{ name: "Documento PDF", extensions: ["pdf"] }],
+            defaultPath: `Nota_WSE_${proximoNumeroSequencial}_${cliente.replace(/\s+/g, "_")}.pdf`,
+          });
+
+          if (!caminhoArquivo) return;
+
+          const container = document.createElement("div");
+          container.innerHTML = htmlDaNota;
+
+          const pdfArrayBuffer = await window
+            .html2pdf()
+            .set({
+              margin: 0,
+              filename: "temp.pdf",
+              image: { type: "jpeg", quality: 0.98 },
+              html2canvas: { scale: 2, useCORS: true },
+              jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
+            })
+            .from(container)
+            .outputPdf("arraybuffer");
+
+          const uint8Array = new Uint8Array(pdfArrayBuffer);
+          await writeFile(caminhoArquivo, uint8Array);
+
+          await db.notas.add({
+            numero: numeroNotaFormatado,
+            cliente: cliente,
+            data: data,
+            valor: valor,
+          });
+
+          alert("Nota gerada e salva com sucesso!");
+          document
+            .querySelectorAll(".input-field")
+            .forEach((input) => (input.value = ""));
+        } catch (erro) {
+          console.error("Erro ao gerar o PDF:", erro);
+          alert("Ocorreu um erro interno ao compilar ou salvar o arquivo PDF.");
+        }
+      });
+  } else if (tela === "catalogo") {
+    renderizarTelaCatalogo();
+  } else if (tela === "logistica") {
+    renderizarTelaOrdemServico();
+  } else if (tela === "agenda") {
+    // REDIRECIONA PARA O NOVO ARQUIVO DE AGENDA
+    tituloModulo.innerText = "Agenda Corporativa";
+    renderizarTelaAgenda();
+  }
+};
+
+document
+  .getElementById("btn-dashboard")
+  .addEventListener("click", () => carregarTela("dashboard"));
+document
+  .getElementById("btn-faturamento")
+  .addEventListener("click", () => carregarTela("faturamento"));
+document
+  .getElementById("btn-catalogo")
+  .addEventListener("click", () => carregarTela("catalogo"));
+document
+  .getElementById("btn-logistica")
+  .addEventListener("click", () => carregarTela("logistica"));
+// ADICIONA O OUVINTE DE CLIQUE DO BOTÃO NOVO:
+document
+  .getElementById("btn-agenda")
+  .addEventListener("click", () => carregarTela("agenda"));
+
+carregarTela("dashboard");

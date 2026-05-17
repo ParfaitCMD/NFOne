@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NFOne - WSE</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  </head>
+  <body>
+    <aside class="sidebar">
+      <div class="logo-container">
+        <h1
+          style="
+            color: var(--text-primary);
+            font-size: 24px;
+            letter-spacing: 2px;
+          "
+        >
+          NF<span style="color: var(--accent-green)">ONE</span>
+        </h1>
+        <p
+          style="color: var(--text-secondary); font-size: 11px; margin-top: 5px"
+        >
+          Gestão Operacional
+        </p>
+      </div>
+
+      <nav class="menu">
+        <button class="menu-item active" id="btn-dashboard">Dashboard</button>
+        <button class="menu-item" id="btn-faturamento">Faturamento</button>
+        <button class="menu-item" id="btn-catalogo">Catálogo Técnico</button>
+        <button class="menu-item" id="btn-logistica">Ordem de Serviço</button>
+        <button class="menu-item" id="btn-agenda">Agenda Corporativa</button>
+      </nav>
+
+      <button class="logout-btn">Sair</button>
+    </aside>
+
+    <main class="main-content">
+      <header class="top-header">
+        <div style="color: var(--text-secondary)">
+          Módulo:
+          <span
+            id="titulo-modulo"
+            style="color: var(--text-primary); font-weight: bold"
+            >Dashboard</span
+          >
+        </div>
+        <div style="font-weight: bold">Ágatha</div>
+      </header>
+
+      <div id="app-container"></div>
+    </main>
+
+    <script type="module" src="main.js"></script>
+  </body>
+</html>

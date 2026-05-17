@@ -1,0 +1,171 @@
+:root {
+  /* Cores de Fundo */
+  --bg-app: #0a0e1a;
+  --bg-sidebar: #111522;
+  --bg-card: #151a30;
+  --bg-input: #0f131f;
+
+  /* Textos e Bordas */
+  --text-primary: #ffffff;
+  --text-secondary: #a0a4b8;
+  --border: #2a2f45;
+
+  /* Destaques */
+  --accent-blue: #00c6ff;
+  --accent-green: #22c55e;
+  --danger: #ef4444;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+body {
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* --- SIDEBAR --- */
+.sidebar {
+  width: 250px;
+  background-color: var(--bg-sidebar);
+  border-right: 1px solid var(--accent-green);
+  padding: 25px;
+  display: flex;
+  flex-direction: column;
+}
+
+.logo-container {
+  margin-bottom: 40px;
+}
+
+.menu {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.menu-item {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  text-align: left;
+  padding: 12px 15px;
+  font-size: 15px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: 0.2s;
+}
+
+.menu-item:hover,
+.menu-item.active {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.logout-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: auto;
+}
+
+/* --- CONTEÚDO PRINCIPAL --- */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.top-header {
+  height: 70px;
+  background-color: var(--bg-app);
+  border-bottom: 1px solid var(--accent-blue);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 30px;
+}
+
+#app-container {
+  padding: 40px;
+  flex: 1;
+}
+
+/* --- FORMULÁRIOS (REVISADO E RESPONSIVO) --- */
+.card-form {
+  background-color: var(--bg-card);
+  padding: 30px;
+  border-radius: 12px;
+  margin-top: 20px;
+  width: 100%; /* Ocupa todo o espaço disponível na coluna/container */
+  box-sizing: border-box; /* Garante que o padding não aumente o tamanho da caixa */
+}
+
+/* Nova classe utilitária para manter o formulário de nota fiscal organizado */
+.faturamento-largura {
+  max-width: 800px; /* Limita apenas o faturamento, impedindo que os campos fiquem esticados demais */
+}
+
+.section-label {
+  color: var(--accent-green);
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 13px;
+  margin-bottom: 15px;
+  display: block;
+  margin-top: 20px;
+}
+
+.form-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.input-field {
+  flex: 1;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: 0.2s;
+  min-width: 0; /* Impede que campos de texto empurrem layouts de tabelas e grids */
+}
+
+.input-field:focus {
+  border-color: var(--accent-blue);
+}
+
+.btn-primary {
+  background-color: var(--accent-green);
+  color: #0a0e1a;
+  border: none;
+  padding: 18px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 20px;
+  transition: 0.2s;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
