@@ -1,19 +1,20 @@
 :root {
-  /* Cores de Fundo */
-  --bg-app: #0a0e1a;
-  --bg-sidebar: #111522;
-  --bg-card: #151a30;
-  --bg-input: #0f131f;
+  /* Cores de Fundo (Roxo e Azul Escuro Profundo) */
+  --bg-app: #060814; /* Azul escuro quase preto, fundo do app */
+  --bg-sidebar: #0b0e22; /* Azul escuro fechado para o menu */
+  --bg-card: #121632; /* Roxo/azul escuro profundo para os cards */
+  --bg-input: #080a1c; /* Fundo dos campos de entrada */
 
   /* Textos e Bordas */
   --text-primary: #ffffff;
-  --text-secondary: #a0a4b8;
-  --border: #2a2f45;
+  --text-secondary: #8b92b6; /* Azul acinzentado suave para leitura secundária */
+  --border: #23284e; /* Linhas sutis combinando com o fundo */
 
-  /* Destaques */
-  --accent-blue: #00c6ff;
-  --accent-green: #22c55e;
-  --danger: #ef4444;
+  /* Destaques (Gradientes e Neons) */
+  --accent-purple: #9d4edd; /* Roxo Neon principal */
+  --accent-blue: #00f0ff; /* Ciano Elétrico para contrastar */
+  --accent-green: #2ec4b6; /* Tom verde-água moderno para sucesso */
+  --danger: #ff0055; /* Vermelho neon para exclusões */
 }
 
 * {
@@ -35,7 +36,7 @@ body {
 .sidebar {
   width: 250px;
   background-color: var(--bg-sidebar);
-  border-right: 1px solid var(--accent-green);
+  border-right: 1px solid var(--border);
   padding: 25px;
   display: flex;
   flex-direction: column;
@@ -61,13 +62,25 @@ body {
   font-size: 15px;
   cursor: pointer;
   border-radius: 8px;
-  transition: 0.2s;
+  transition: all 0.2s ease;
+  font-weight: 500;
 }
 
-.menu-item:hover,
-.menu-item.active {
-  background-color: var(--bg-card);
+.menu-item:hover {
+  background-color: rgba(157, 78, 221, 0.1);
   color: var(--text-primary);
+  padding-left: 20px; /* Efeito sutil de deslocamento ao passar o mouse */
+}
+
+.menu-item.active {
+  background: linear-gradient(
+    90deg,
+    rgba(157, 78, 221, 0.25) 0%,
+    rgba(0, 240, 255, 0.05) 100%
+  );
+  color: var(--text-primary);
+  border-left: 4px solid var(--accent-purple);
+  padding-left: 18px;
 }
 
 .logout-btn {
@@ -78,6 +91,14 @@ body {
   border-radius: 8px;
   cursor: pointer;
   margin-top: auto;
+  transition: all 0.2s;
+  font-weight: bold;
+}
+
+.logout-btn:hover {
+  border-color: var(--danger);
+  color: #fff;
+  background-color: rgba(255, 0, 85, 0.1);
 }
 
 /* --- CONTEÚDO PRINCIPAL --- */
@@ -90,8 +111,8 @@ body {
 
 .top-header {
   height: 70px;
-  background-color: var(--bg-app);
-  border-bottom: 1px solid var(--accent-blue);
+  background-color: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -103,29 +124,31 @@ body {
   flex: 1;
 }
 
-/* --- FORMULÁRIOS (REVISADO E RESPONSIVO) --- */
+/* --- FORMULÁRIOS & CARDS --- */
 .card-form {
   background-color: var(--bg-card);
   padding: 30px;
   border-radius: 12px;
   margin-top: 20px;
-  width: 100%; /* Ocupa todo o espaço disponível na coluna/container */
-  box-sizing: border-box; /* Garante que o padding não aumente o tamanho da caixa */
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); /* Sombra pesada para dar profundidade */
 }
 
-/* Nova classe utilitária para manter o formulário de nota fiscal organizado */
 .faturamento-largura {
-  max-width: 800px; /* Limita apenas o faturamento, impedindo que os campos fiquem esticados demais */
+  max-width: 800px;
 }
 
 .section-label {
-  color: var(--accent-green);
+  color: var(--accent-blue); /* Mudado para ciano para destacar as seções */
   font-weight: bold;
   text-transform: uppercase;
   font-size: 13px;
   margin-bottom: 15px;
   display: block;
   margin-top: 20px;
+  letter-spacing: 1px;
 }
 
 .form-row {
@@ -143,29 +166,69 @@ body {
   border-radius: 8px;
   font-size: 14px;
   outline: none;
-  transition: 0.2s;
-  min-width: 0; /* Impede que campos de texto empurrem layouts de tabelas e grids */
+  transition: all 0.2s;
+  min-width: 0;
 }
 
 .input-field:focus {
-  border-color: var(--accent-blue);
+  border-color: var(--accent-purple);
+  box-shadow: 0 0 8px rgba(157, 78, 221, 0.4); /* Brilho neon roxo ao focar */
 }
 
+/* Customização para inputs do tipo select ou calendário corporativo */
+select.input-field {
+  cursor: pointer;
+}
+
+/* --- BOTÃO PRINCIPAL (GRADIENTE ROXO/AZUL) --- */
 .btn-primary {
-  background-color: var(--accent-green);
-  color: #0a0e1a;
+  background: linear-gradient(135deg, var(--accent-purple) 0%, #7b2cbf 100%);
+  color: #ffffff;
   border: none;
-  padding: 18px;
+  padding: 16px;
   border-radius: 8px;
   font-weight: bold;
-  font-size: 16px;
+  font-size: 15px;
   cursor: pointer;
   width: 100%;
   margin-top: 20px;
-  transition: 0.2s;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(157, 78, 221, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .btn-primary:hover {
-  opacity: 0.9;
+  opacity: 1;
   transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(157, 78, 221, 0.5); /* Aumenta o brilho no hover */
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* --- ESTILIZAÇÃO COMPLEMENTAR PARA AS TABELAS --- */
+table {
+  width: 100%;
+}
+
+th {
+  color: var(--text-secondary) !important;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+tr {
+  transition: background-color 0.2s;
+}
+
+tr:hover {
+  background-color: rgba(
+    255,
+    255,
+    255,
+    0.02
+  ); /* Destaque sutil na linha da tabela */
 }

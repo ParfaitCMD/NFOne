@@ -8,6 +8,7 @@ import { renderizarTelaDashboard } from "./dashboard.js";
 import { renderizarTelaCatalogo } from "./catalogo.js";
 import { renderizarTelaOrdemServico } from "./ordemdeservico.js";
 import { renderizarTelaAgenda } from "./agenda.js";
+import { renderizarTelaOrcamentos } from "./orcamentos.js";
 
 const appContainer = document.getElementById("app-container");
 const tituloModulo = document.getElementById("titulo-modulo");
@@ -198,23 +199,26 @@ window.carregarTela = function (tela) {
         }
       });
   } else if (tela === "catalogo") {
+    tituloModulo.innerText = "Catálogo Técnico";
     renderizarTelaCatalogo();
   } else if (tela === "logistica") {
+    tituloModulo.innerText = "Ordem de Serviço";
     renderizarTelaOrdemServico();
   } else if (tela === "agenda") {
     tituloModulo.innerText = "Agenda Corporativa";
     renderizarTelaAgenda();
+  } else if (tela === "orcamentos") {
+    tituloModulo.innerText = "Orçamentos e Laudos";
+    renderizarTelaOrcamentos();
   }
 };
 
-// CORREÇÃO DEFINITIVA DO LOGOUT: Removido o confirm() nativo interceptado pelo Tauri v2
 document.querySelector(".logout-btn").addEventListener("click", async (e) => {
   const botao = e.target;
 
   if (botao.innerText === "Sair") {
     botao.innerText = "Confirma?";
 
-    // Volta ao texto normal após 3 segundos se o usuário desistir de clicar novamente
     setTimeout(() => {
       if (botao && botao.innerText === "Confirma?") {
         botao.innerText = "Sair";
@@ -232,6 +236,7 @@ document.querySelector(".logout-btn").addEventListener("click", async (e) => {
   }
 });
 
+// INICIALIZADORES DOS DIÁLOGOS DE CLIQUE DO MENU LATERAL
 document
   .getElementById("btn-dashboard")
   .addEventListener("click", () => carregarTela("dashboard"));
@@ -247,6 +252,9 @@ document
 document
   .getElementById("btn-agenda")
   .addEventListener("click", () => carregarTela("agenda"));
+document
+  .getElementById("btn-orcamentos")
+  .addEventListener("click", () => carregarTela("orcamentos")); // ADICIONADO E CORRIGIDO AQUI
 
 async function inicializarFluxoDeAcesso() {
   try {

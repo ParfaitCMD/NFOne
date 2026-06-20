@@ -1,6 +1,7 @@
 // src/dashboard.js
 import { db } from "./db.js";
 import { LOGO_WSE_BASE64 } from "./assets.js";
+import { gerarPlanilhaHistoricoCompleto } from "./historico.js";
 
 let idNotaEmEdicao = null;
 
@@ -12,7 +13,7 @@ export function renderizarTelaDashboard() {
     <h2>Painel de Controle <span style="color: var(--accent-green);">WSE</span></h2>
     <p style="color: var(--text-secondary); margin-top: 5px; margin-bottom: 25px;">Bem-vindo de volta! Monitoramento operacional e financeiro rápido.</p>
     
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; width: 100%; box-sizing: border-box; margin-bottom: 30px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; width: 100%; box-sizing: border-box; margin-bottom: 20px;">
       
       <div class="card-form" style="margin-top: 0; padding: 25px; background: linear-gradient(135deg, #151a30 0%, #1a2035 100%); border-left: 5px solid var(--accent-green);">
         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -47,6 +48,12 @@ export function renderizarTelaDashboard() {
         </div>
       </div>
 
+    </div>
+
+    <div style="margin-bottom: 25px; display: flex; justify-content: flex-start;">
+      <button id="btn-exportar-historico" style="margin-top: 0; padding: 8px 16px; font-size: 12px; background: #111522; color: var(--text-secondary); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-weight: 600; width: auto; transition: 0.2s;" onmouseover="this.style.borderColor='var(--accent-purple)'; this.style.color='#fff'" onmouseout="this.style.borderColor='var(--border)'; this.style.color='var(--text-secondary)'">
+        📋 Exportar Relatório Geral
+      </button>
     </div>
 
     <div style="display: grid; grid-template-columns: 1fr 340px; gap: 25px; width: 100%; box-sizing: border-box; align-items: flex-start;">
@@ -107,6 +114,18 @@ async function inicializarLogicaDashboard() {
   const btnCancelar = document.getElementById("btn-cancelar-nota-edicao");
   const painelForm = document.getElementById("painel-nota-rapida");
   const tituloForm = document.getElementById("titulo-form-nota");
+  const btnExportar = document.getElementById("btn-exportar-historico");
+
+  btnExportar.addEventListener("click", async () => {
+    try {
+      btnExportar.innerText = "⚡ Processando...";
+      await gerarPlanilhaHistoricoCompleto();
+      btnExportar.innerText = "📋 Exportar Relatório Geral";
+    } catch (e) {
+      console.error("Erro na exportação de tabelas:", e);
+      btnExportar.innerText = "📋 Exportar Relatório Geral";
+    }
+  });
 
   const gerarProximoNumeroNota = async () => {
     const notas = await db.notas.toArray();
@@ -229,7 +248,6 @@ async function inicializarLogicaDashboard() {
     inputValor.value = "";
   };
 
-  // INJETADO: MOTOR DE PDF DENTRO DO BOTÃO SALVAR
   btnSalvar.addEventListener("click", async () => {
     const cliente = inputNome.value.trim();
     const data = inputData.value.trim();
@@ -260,7 +278,6 @@ async function inicializarLogicaDashboard() {
       });
     }
 
-    // DISPARA O DOWNLOAD AUTOMÁTICO DO PDF NO NAVEGADOR
     try {
       const htmlDaNota = `
       <div class="pdf-wrapper">
