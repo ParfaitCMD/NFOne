@@ -154,23 +154,10 @@ window.carregarTela = function (tela) {
       `;
 
         try {
-          if (!window.__TAURI__)
-            throw new Error("API Nativa do Tauri não encontrada.");
-
-          // CHAMADA NATIVA PARA ABRIR O DIÁLOGO DE SALVAR
-          const caminhoArquivo = await window.__TAURI__.core.invoke(
-            "plugin:dialog|save",
-            {
-              filters: [{ name: "Documento PDF", extensions: ["pdf"] }],
-              defaultPath: `Nota_WSE_${proximoNumeroSequencial}_${cliente.replace(/\s+/g, "_")}.pdf`,
-            },
-          );
-
-          if (!caminhoArquivo) return;
-
           const container = document.createElement("div");
           container.innerHTML = htmlDaNota;
 
+          // 1. O html2pdf gera o documento e exporta no formato de ArrayBuffer
           const pdfArrayBuffer = await window
             .html2pdf()
             .set({
@@ -183,14 +170,24 @@ window.carregarTela = function (tela) {
             .from(container)
             .outputPdf("arraybuffer");
 
-          const uint8Array = new Uint8Array(pdfArrayBuffer);
+          // 2. Transforma o ArrayBuffer em um Blob do tipo application/pdf
+          const blob = new Blob([pdfArrayBuffer], { type: "application/pdf" });
 
-          // CHAMADA NATIVA PARA ESCREVER O ARQUIVO NO HD
-          await window.__TAURI__.core.invoke("plugin:fs|write", {
-            path: caminhoArquivo,
-            data: Array.from(uint8Array),
-          });
+          // 3. Cria uma URL temporária apontando para esse arquivo na memória do navegador
+          const urlBlob = URL.createObjectURL(blob);
 
+          // 4. Cria e dispara um link invisível de download web do navegador
+          const linkDownload = document.createElement("a");
+          linkDownload.href = urlBlob;
+          linkDownload.download = `Nota_WSE_${proximoNumeroSequencial}_${cliente.replace(/\s+/g, "_")}.pdf`;
+          document.body.appendChild(linkDownload);
+          linkDownload.click();
+
+          // Limpa a memória
+          document.body.removeChild(linkDownload);
+          URL.revokeObjectURL(urlBlob);
+
+          // 5. Salva na base de dados IndexedDB/Dexie local como de costume
           await db.notas.add({
             numero: numeroNotaFormatado,
             cliente: cliente,
@@ -198,15 +195,13 @@ window.carregarTela = function (tela) {
             valor: valor,
           });
 
-          alert("Nota gerada e salva com sucesso!");
+          alert("Nota gerada com sucesso via navegador!");
           document
             .querySelectorAll(".input-field")
             .forEach((input) => (input.value = ""));
         } catch (erro) {
           console.error("Erro ao gerar o PDF:", erro);
-          alert(
-            "Ocorreu um erro interno ao compilar ou salvar o arquivo PDF. Verifique se a API global está ativada.",
-          );
+          alert("Ocorreu um erro ao compilar e baixar o arquivo PDF.");
         }
       });
   } else if (tela === "catalogo") {
