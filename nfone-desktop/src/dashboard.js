@@ -1,5 +1,6 @@
 // src/dashboard.js
 import { db } from "./db.js";
+import { LOGO_WSE_BASE64 } from "./assets.js";
 
 let idNotaEmEdicao = null;
 
@@ -107,12 +108,10 @@ async function inicializarLogicaDashboard() {
   const painelForm = document.getElementById("painel-nota-rapida");
   const tituloForm = document.getElementById("titulo-form-nota");
 
-  // FUNÇÃO QUE CALCULA O PRÓXIMO NÚMERO SEQUENCIAL (EX: 001, 002, 003...)
   const gerarProximoNumeroNota = async () => {
     const notas = await db.notas.toArray();
     if (notas.length === 0) return "001";
 
-    // Filtra e converte os números das notas existentes para inteiros para achar o maior
     const numerosConvertidos = notas.map((n) => {
       let numLimpo = n.numero ? n.numero.replace("#", "") : "0";
       return parseInt(numLimpo, 10) || 0;
@@ -121,7 +120,6 @@ async function inicializarLogicaDashboard() {
     const maiorNumero = Math.max(...numerosConvertidos);
     const proximo = maiorNumero + 1;
 
-    // Formata com zeros à esquerda (ex: 4 vira 004)
     return String(proximo).padStart(3, "0");
   };
 
@@ -138,7 +136,6 @@ async function inicializarLogicaDashboard() {
       return;
     }
 
-    // Ordena para exibir as notas mais recentes no topo
     const notasOrdenadas = [...notasSalvas].reverse();
 
     notasOrdenadas.forEach((nota) => {
@@ -158,21 +155,19 @@ async function inicializarLogicaDashboard() {
         <td style="padding: 15px; text-align: center;">
           <div style="display: flex; gap: 10px; justify-content: center;">
             <button class="btn-edit-nota" data-id="${nota.id}" style="background: none; border: none; color: var(--accent-blue); cursor: pointer; font-size: 13px; font-weight: bold;">Editar</button>
-            <button class="btn-del-nota" data-id="${nota.id}" style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 13px; font-weight: bold;">Excluir</button>
+            <button class="btn-del-nota" data-id="${nota.id}" style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 13px; font-weight: bold; transition: 0.2s;">Excluir</button>
           </div>
         </td>
       `;
       tbody.appendChild(tr);
     });
 
-    // Atualiza os KPIs principais
     txtTotalNotas.innerText = notasSalvas.length;
     txtFaturamento.innerText = `R$ ${somaTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
     const mediaCalculada = somaTotal / notasSalvas.length;
     txtMedia.innerText = `R$ ${mediaCalculada.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-    // EVENTO: ABRIR EDIÇÃO DA NOTA
     document.querySelectorAll(".btn-edit-nota").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
         const id = parseInt(e.target.getAttribute("data-id"));
@@ -193,14 +188,29 @@ async function inicializarLogicaDashboard() {
       });
     });
 
-    // EVENTO: EXCLUIR REGISTRO DE NOTA
     document.querySelectorAll(".btn-del-nota").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
-        if (!confirm("Remover permanentemente esta nota do histórico?")) return;
-        const id = parseInt(e.target.getAttribute("data-id"));
-        await db.notas.delete(id);
-        if (idNotaEmEdicao === id) resetarFormularioNota();
-        atualizarPainel();
+        const botao = e.target;
+
+        if (botao.innerText === "Excluir") {
+          botao.innerText = "Confirma?";
+          botao.style.color = "#ef4444";
+
+          setTimeout(() => {
+            if (botao && botao.innerText === "Confirma?") {
+              botao.innerText = "Excluir";
+              botao.style.color = "var(--danger)";
+            }
+          }, 3000);
+          return;
+        }
+
+        if (botao.innerText === "Confirma?") {
+          const id = parseInt(botao.getAttribute("data-id"));
+          await db.notas.delete(id);
+          if (idNotaEmEdicao === id) resetarFormularioNota();
+          atualizarPainel();
+        }
       });
     });
   };
@@ -219,7 +229,7 @@ async function inicializarLogicaDashboard() {
     inputValor.value = "";
   };
 
-  // EVENTO: ADICIONAR OU SALVAR ATUALIZAÇÃO DA NOTA
+  // INJETADO: MOTOR DE PDF DENTRO DO BOTÃO SALVAR
   btnSalvar.addEventListener("click", async () => {
     const cliente = inputNome.value.trim();
     const data = inputData.value.trim();
@@ -228,24 +238,104 @@ async function inicializarLogicaDashboard() {
     if (!cliente || !valor)
       return alert("Por favor, informe no mínimo o Cliente e o Valor!");
 
+    let numeroNotaFormatado = "";
+
     if (idNotaEmEdicao === null) {
-      // GERAÇÃO SEQUENCIAL INFALÍVEL EM ORDEM CRONOLÓGICA (001 -> ...)
       const proximoNum = await gerarProximoNumeroNota();
+      numeroNotaFormatado = "#" + proximoNum;
       await db.notas.add({
-        numero: "#" + proximoNum,
+        numero: numeroNotaFormatado,
         cliente,
         data,
         valor,
       });
     } else {
-      // Mantém o mesmo número da nota original ao atualizar os campos
       const notaOriginal = await db.notas.get(idNotaEmEdicao);
+      numeroNotaFormatado = notaOriginal.numero;
       await db.notas.update(idNotaEmEdicao, {
-        numero: notaOriginal.numero,
+        numero: numeroNotaFormatado,
         cliente,
         data,
         valor,
       });
+    }
+
+    // DISPARA O DOWNLOAD AUTOMÁTICO DO PDF NO NAVEGADOR
+    try {
+      const htmlDaNota = `
+      <div class="pdf-wrapper">
+          <style>
+              .pdf-wrapper { font-family: Helvetica, Arial, sans-serif; padding: 40px; color: #000; background: #FFF; width: 750px; position: relative; box-sizing: border-box; }
+              .logo-header { position: absolute; top: 30px; left: 30px; width: 80px; height: 80px; object-fit: contain; }
+              .date { text-align: right; font-size: 14px; margin-bottom: 20px; }
+              .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; margin-top: 30px; }
+              .header h1 { margin: 0; font-size: 26px; }
+              .section { margin-bottom: 20px; }
+              .section-title { background-color: #f0f0f0; padding: 8px; font-weight: bold; border-left: 4px solid #333; margin-bottom: 10px; font-size: 12px; }
+              .row { margin-bottom: 4px; font-size: 13px; }
+              .bold { font-weight: bold; }
+              .total-box { margin-top: 20px; padding: 15px; border: 2px solid #000; text-align: right; font-size: 18px; font-weight: bold; }
+              .desc-box { border: 1px solid #ccc; padding: 10px; min-height: 80px; font-size: 13px; white-space: pre-wrap; margin-bottom: 10px; }
+              .footer { margin-top: 40px; text-align: center; font-size: 11px; border-top: 1px solid #ccc; padding-top: 10px; }
+          </style>
+          ${LOGO_WSE_BASE64 ? `<img src="${LOGO_WSE_BASE64}" class="logo-header" />` : ""}
+          <div class="date"><span class="bold">Data de Entrega:</span> ${data || "-"}</div>
+          <div class="header">
+              <h1>WSE Bombas e Motores</h1>
+              <h3>Nota de Prestação de Serviço</h3>
+              <div style="font-size: 14px; margin-top: 5px; font-weight: bold; color: #333;">N/D/N: ${numeroNotaFormatado}</div>
+          </div>
+          <div class="section">
+              <div class="section-title">IDENTIFICAÇÃO DO PRESTADOR</div>
+              <div class="row"><span class="bold">Razão Social:</span> WSE BOMBAS E MOTORES ELETRICOS LTDA</div>
+              <div class="row"><span class="bold">CNPJ:</span> 58.054.890/0001-02</div>
+              <div class="row"><span class="bold">E-mail:</span> wsebombas@gmail.com</div>
+          </div>
+          <div class="section">
+              <div class="section-title">DADOS DO TOMADOR (CLIENTE)</div>
+              <div class="row"><span class="bold">Nome/Razão Social:</span> ${cliente}</div>
+          </div>
+          <div class="section">
+              <div class="section-title">DETALHES DO TRABALHO</div>
+              <div style="margin-top: 10px;">
+                  <div class="bold">Descrição dos Serviços:</div>
+                  <div class="desc-box">Prestação de serviço operacional unificado. Detalhes completos sob consulta técnica na ordem de faturamento principal.</div>
+              </div>
+          </div>
+          <div class="total-box">Valor Total: R$ ${valor}</div>
+          <div class="footer">
+              <span class="bold">WSE BOMBAS E MOTORES ELÉTRICOS</span><br/>
+              CNPJ: 58.054.890/0001-02
+          </div>
+      </div>`;
+
+      const container = document.createElement("div");
+      container.innerHTML = htmlDaNota;
+
+      const pdfArrayBuffer = await window
+        .html2pdf()
+        .set({
+          margin: 0,
+          filename: "temp.pdf",
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
+        })
+        .from(container)
+        .outputPdf("arraybuffer");
+
+      const blob = new Blob([pdfArrayBuffer], { type: "application/pdf" });
+      const urlBlob = URL.createObjectURL(blob);
+
+      const linkDownload = document.createElement("a");
+      linkDownload.href = urlBlob;
+      linkDownload.download = `Nota_Rapida_WSE_${numeroNotaFormatado.replace("#", "")}_${cliente.replace(/\s+/g, "_")}.pdf`;
+      document.body.appendChild(linkDownload);
+      linkDownload.click();
+      document.body.removeChild(linkDownload);
+      URL.revokeObjectURL(urlBlob);
+    } catch (e) {
+      console.error("Erro ao baixar PDF da nota rápida:", e);
     }
 
     resetarFormularioNota();
@@ -254,6 +344,5 @@ async function inicializarLogicaDashboard() {
 
   btnCancelar.addEventListener("click", resetarFormularioNota);
 
-  // Executa a primeira renderização dos dados na tela
   atualizarPainel();
 }

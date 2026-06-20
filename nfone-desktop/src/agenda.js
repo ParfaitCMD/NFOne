@@ -78,7 +78,6 @@ export function renderizarTelaAgenda() {
   montarCalendarioCompleto();
 }
 
-// CORREÇÃO: Ajustado a variável 'direcao' que estava escrita em inglês internamente
 function alterarMes(direcao) {
   dataAtualFoco.setMonth(dataAtualFoco.getMonth() + direcao);
   montarCalendarioCompleto();
@@ -182,9 +181,9 @@ async function exibirNotasDoDiaSelecionado() {
         <div style="font-weight: bold; color: #fff; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${nota.titulo}</div>
         <div style="font-size: 12px; color: var(--text-secondary); margin-top: 3px; white-space: pre-wrap;">${nota.descricao}</div>
       </div>
-      <div style="display: flex; gap: 8px;">
+      <div style="display: flex; gap: 8px; align-items: center;">
         <button class="btn-cal-edit" data-id="${nota.id}" style="background:none; border:none; color:var(--accent-blue); cursor:pointer; font-size:11px; font-weight:bold;">Editar</button>
-        <button class="btn-cal-del" data-id="${nota.id}" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:11px; font-weight:bold;">X</button>
+        <button class="btn-cal-del" data-id="${nota.id}" style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:11px; font-weight:bold; transition: 0.2s;">X</button>
       </div>
     `;
 
@@ -198,11 +197,29 @@ async function exibirNotasDoDiaSelecionado() {
       document.getElementById("btn-salvar-agenda").innerText = "ATUALIZAR NOTA";
     });
 
-    item.querySelector(".btn-cal-del").addEventListener("click", async () => {
-      if (!confirm("Deseja deletar esta anotação da agenda?")) return;
-      await db.agenda.delete(nota.id);
-      resetarFormularioAgenda();
-      montarCalendarioCompleto();
+    // CORREÇÃO DEFINITIVA DA EXCLUSÃO: Clique duplo inline seguro sem window.confirm
+    item.querySelector(".btn-cal-del").addEventListener("click", async (e) => {
+      const botao = e.target;
+
+      if (botao.innerText === "X") {
+        botao.innerText = "Confirma?";
+        botao.style.color = "#ef4444"; // Torna o texto vermelho vivo de aviso
+
+        // Reseta o botão ao original após 3 segundos de inatividade
+        setTimeout(() => {
+          if (botao && botao.innerText === "Confirma?") {
+            botao.innerText = "X";
+            botao.style.color = "var(--danger)";
+          }
+        }, 3000);
+        return;
+      }
+
+      if (botao.innerText === "Confirma?") {
+        await db.agenda.delete(nota.id);
+        resetarFormularioAgenda();
+        montarCalendarioCompleto();
+      }
     });
 
     listaContainer.appendChild(item);
@@ -214,7 +231,7 @@ async function salvarAnotacaoAgenda() {
   const descricao = document.getElementById("agenda-input-desc").value.trim();
   const cor = document.getElementById("agenda-input-cor").value;
 
-  if (!titulo) return alert("Por favor, dê um título ao compromisso!");
+  if (!titulo) return alert("Por favor, dē um título ao compromisso!");
 
   const payload = { dataUnica: dataSelecionadaStr, titulo, descricao, cor };
 

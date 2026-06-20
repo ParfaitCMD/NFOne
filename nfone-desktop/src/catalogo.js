@@ -80,7 +80,6 @@ async function inicializarLogicaAdmin() {
     tbody.innerHTML = "";
     let listaEquipamentos = await db.equipamentos.toArray();
 
-    // Carga inicial padrão caso o banco local esteja vazio
     if (listaEquipamentos.length === 0) {
       const padroes = [
         {
@@ -125,13 +124,12 @@ async function inicializarLogicaAdmin() {
         <td style="padding: 15px; color: var(--accent-green);">R$ ${item.valor || "0,00"}</td>
         <td style="padding: 15px; text-align: center; display: flex; gap: 12px; justify-content: center;">
           <button class="btn-acao-editar" data-id="${item.id}" style="background: none; border: none; color: var(--accent-blue); cursor: pointer; font-weight: bold;">Editar</button>
-          <button class="btn-acao-excluir" data-id="${item.id}" style="background: none; border: none; color: var(--danger); cursor: pointer; font-weight: bold;">Excluir</button>
+          <button class="btn-acao-excluir" data-id="${item.id}" style="background: none; border: none; color: var(--danger); cursor: pointer; font-weight: bold; transition: 0.2s;">Excluir</button>
         </td>
       `;
       tbody.appendChild(tr);
     });
 
-    // Eventos dos botões da tabela
     document.querySelectorAll(".btn-acao-editar").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
         const id = parseInt(e.target.getAttribute("data-id"));
@@ -153,13 +151,30 @@ async function inicializarLogicaAdmin() {
       });
     });
 
+    // CORREÇÃO DEFINITIVA DA EXCLUSÃO: Duplo clique customizado inline sem window.confirm
     document.querySelectorAll(".btn-acao-excluir").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
-        if (!confirm("Remover permanentemente do catálogo?")) return;
-        const id = parseInt(e.target.getAttribute("data-id"));
-        await db.equipamentos.delete(id);
-        if (idEquipamentoEmEdicao === id) resetarFormulario();
-        atualizarTabela(buscaInput.value);
+        const botao = e.target;
+
+        if (botao.innerText === "Excluir") {
+          botao.innerText = "Confirma?";
+          botao.style.color = "#ef4444";
+
+          setTimeout(() => {
+            if (botao && botao.innerText === "Confirma?") {
+              botao.innerText = "Excluir";
+              botao.style.color = "var(--danger)";
+            }
+          }, 3000);
+          return;
+        }
+
+        if (botao.innerText === "Confirma?") {
+          const id = parseInt(botao.getAttribute("data-id"));
+          await db.equipamentos.delete(id);
+          if (idEquipamentoEmEdicao === id) resetarFormulario();
+          atualizarTabela(buscaInput.value);
+        }
       });
     });
   };

@@ -99,9 +99,7 @@ async function inicializarLogicaOrdemServico() {
   const painelForm = document.getElementById("painel-os-cadastro");
   const tituloForm = document.getElementById("titulo-form-os");
 
-  // Define uma tabela dedicada para as Ordens se não existir no Dexie, ou usa o fallback unificado
   if (!db.ordens) {
-    // Caso sua estrutura de db.js ainda não tenha a tabela explicita, criamos dinamicamente para evitar travamentos
     try {
       db.version(db.verno + 1).stores({
         ordens: "++id, numero, cliente, equipamento, tecnico, status",
@@ -143,7 +141,6 @@ async function inicializarLogicaOrdemServico() {
       return;
     }
 
-    // Conta os status para preencher os KPIs de forma real
     ordens.forEach((o) => {
       if (o.status === "Pendente") countP++;
       else if (o.status === "Em Andamento") countA++;
@@ -154,7 +151,6 @@ async function inicializarLogicaOrdemServico() {
     kpiAndamento.innerText = countA;
     kpiConcluidas.innerText = countC;
 
-    // Renderiza a tabela de trás para frente (mais recente em cima)
     [...ordens].reverse().forEach((os) => {
       let badgeStyle =
         "background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid #f59e0b;";
@@ -179,14 +175,13 @@ async function inicializarLogicaOrdemServico() {
         <td style="padding: 15px; text-align: center;">
           <div style="display: flex; gap: 10px; justify-content: center;">
             <button class="btn-edit-os" data-id="${os.id}" style="background: none; border: none; color: var(--accent-blue); cursor: pointer; font-size: 13px; font-weight: bold;">Editar</button>
-            <button class="btn-del-os" data-id="${os.id}" style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 13px; font-weight: bold;">Excluir</button>
+            <button class="btn-del-os" data-id="${os.id}" style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 13px; font-weight: bold; transition: 0.2s;">Excluir</button>
           </div>
         </td>
       `;
       tbody.appendChild(tr);
     });
 
-    // EVENTO INTERNO: EDITAR OS
     document.querySelectorAll(".btn-edit-os").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
         const id = parseInt(e.target.getAttribute("data-id"), 10);
@@ -205,14 +200,31 @@ async function inicializarLogicaOrdemServico() {
       });
     });
 
-    // EVENTO INTERNO: DELETAR OS
+    // CORREÇÃO DEFINITIVA DO EXCLUSÃO: Clique duplo customizado e inline à prova de falhas do Tauri v2
     document.querySelectorAll(".btn-del-os").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
-        if (!confirm("Remover permanentemente esta Ordem de Serviço?")) return;
-        const id = parseInt(e.target.getAttribute("data-id"), 10);
-        await db.ordens.delete(id);
-        if (idOSEmEdicao === id) resetarFormularioOS();
-        atualizarTelaOS();
+        const botao = e.target;
+
+        if (botao.innerText === "Excluir") {
+          botao.innerText = "Confirma?";
+          botao.style.color = "#ef4444"; // Transforma em vermelho vivo indicando perigo
+
+          // Reseta o botão para o texto original após 3 segundos de inatividade
+          setTimeout(() => {
+            if (botao && botao.innerText === "Confirma?") {
+              botao.innerText = "Excluir";
+              botao.style.color = "var(--danger)";
+            }
+          }, 3000);
+          return;
+        }
+
+        if (botao.innerText === "Confirma?") {
+          const id = parseInt(botao.getAttribute("data-id"), 10);
+          await db.ordens.delete(id);
+          if (idOSEmEdicao === id) resetarFormularioOS();
+          atualizarTelaOS();
+        }
       });
     });
   };

@@ -6,13 +6,10 @@ let deepLinkInicializado = false;
 
 export function renderizarTelaLogin(aoLogarSucesso) {
   const appContainer = document.getElementById("app-container");
-
   const sidebar = document.querySelector(".sidebar");
-
   const topHeader = document.querySelector(".top-header");
 
   if (sidebar) sidebar.style.display = "none";
-
   if (topHeader) topHeader.style.display = "none";
 
   appContainer.innerHTML = `
@@ -109,10 +106,8 @@ async function loginGoogle() {
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-
       options: {
         redirectTo: "nfone://login",
-
         skipBrowserRedirect: true,
       },
     });
@@ -126,14 +121,12 @@ async function loginGoogle() {
     });
   } catch (err) {
     console.error(err);
-
     feedback.innerText = err.message || "Erro ao iniciar login.";
   }
 }
 
 async function iniciarDeepLinkSeguro(callbackEntrar) {
   if (deepLinkInicializado) return;
-
   deepLinkInicializado = true;
 
   try {
@@ -142,7 +135,6 @@ async function iniciarDeepLinkSeguro(callbackEntrar) {
         if (!url) return;
 
         console.log("URL RECEBIDA:", url);
-
         const feedback = document.getElementById("login-status-feedback");
 
         if (feedback) {
@@ -150,9 +142,7 @@ async function iniciarDeepLinkSeguro(callbackEntrar) {
         }
 
         const urlConvertida = url.replace("nfone://login", "http://localhost");
-
         const urlObj = new URL(urlConvertida);
-
         const code = urlObj.searchParams.get("code");
 
         console.log("CODE:", code);
@@ -161,7 +151,6 @@ async function iniciarDeepLinkSeguro(callbackEntrar) {
           if (feedback) {
             feedback.innerText = "Código OAuth não encontrado.";
           }
-
           return;
         }
 
@@ -170,68 +159,56 @@ async function iniciarDeepLinkSeguro(callbackEntrar) {
 
         if (error) {
           console.error(error);
-
           if (feedback) {
             feedback.innerText = error.message;
           }
-
           return;
         }
 
         console.log("LOGIN OK");
 
         const user = data.session.user;
-
         const nomeUsuario = user.user_metadata.name || user.email || "Operador";
+        const emailUsuario = user.email || nomeUsuario;
 
         if (feedback) {
           feedback.innerText = `Bem-vindo ${nomeUsuario}`;
         }
 
+        // CORREÇÃO: Altera o texto estático do topo direito para o Gmail logado
+        const elNomeHeader = document.getElementById("nome-usuario-header");
+        if (elNomeHeader) {
+          elNomeHeader.innerText = emailUsuario;
+          // Se você preferir o nome completo em vez do e-mail, mude para: elNomeHeader.innerText = nomeUsuario;
+        }
+
         await db.notas.count();
 
         const sidebarDOM = document.querySelector(".sidebar");
-
         const topHeaderDOM = document.querySelector(".top-header");
 
-        if (sidebarDOM) {
-          sidebarDOM.style.display = "flex";
-        }
-
-        if (topHeaderDOM) {
-          topHeaderDOM.style.display = "flex";
-        }
+        if (sidebarDOM) sidebarDOM.style.display = "flex";
+        if (topHeaderDOM) topHeaderDOM.style.display = "flex";
 
         setTimeout(() => {
           callbackEntrar();
         }, 1000);
       } catch (err) {
         console.error("Erro OAuth:", err);
-
         const feedback = document.getElementById("login-status-feedback");
-
         if (feedback) {
           feedback.innerText = "Erro ao concluir login.";
         }
       }
     }
 
-    // ESCUTA EVENTOS FUTUROS
-    window.__TAURI__.event.listen(
-      "deep-link://new-url",
+    window.__TAURI__.event.listen("deep-link://new-url", async (event) => {
+      console.log("EVENTO FUTURO:", event);
+      const urls = event.payload;
+      const url = urls[0];
+      await processarUrl(url);
+    });
 
-      async (event) => {
-        console.log("EVENTO FUTURO:", event);
-
-        const urls = event.payload;
-
-        const url = urls[0];
-
-        await processarUrl(url);
-      },
-    );
-
-    // CAPTURA URL INICIAL
     const initialUrl = await window.__TAURI__.core.invoke(
       "plugin:deep-link|get_current",
     );

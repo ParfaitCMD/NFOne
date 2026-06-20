@@ -157,7 +157,6 @@ window.carregarTela = function (tela) {
           const container = document.createElement("div");
           container.innerHTML = htmlDaNota;
 
-          // 1. O html2pdf gera o documento e exporta no formato de ArrayBuffer
           const pdfArrayBuffer = await window
             .html2pdf()
             .set({
@@ -170,24 +169,18 @@ window.carregarTela = function (tela) {
             .from(container)
             .outputPdf("arraybuffer");
 
-          // 2. Transforma o ArrayBuffer em um Blob do tipo application/pdf
           const blob = new Blob([pdfArrayBuffer], { type: "application/pdf" });
-
-          // 3. Cria uma URL temporária apontando para esse arquivo na memória do navegador
           const urlBlob = URL.createObjectURL(blob);
 
-          // 4. Cria e dispara um link invisível de download web do navegador
           const linkDownload = document.createElement("a");
           linkDownload.href = urlBlob;
           linkDownload.download = `Nota_WSE_${proximoNumeroSequencial}_${cliente.replace(/\s+/g, "_")}.pdf`;
           document.body.appendChild(linkDownload);
           linkDownload.click();
 
-          // Limpa a memória
           document.body.removeChild(linkDownload);
           URL.revokeObjectURL(urlBlob);
 
-          // 5. Salva na base de dados IndexedDB/Dexie local como de costume
           await db.notas.add({
             numero: numeroNotaFormatado,
             cliente: cliente,
@@ -214,8 +207,24 @@ window.carregarTela = function (tela) {
   }
 };
 
-document.querySelector(".logout-btn").addEventListener("click", async () => {
-  if (confirm("Deseja desconectar e sair do sistema?")) {
+// CORREÇÃO DEFINITIVA DO LOGOUT: Removido o confirm() nativo interceptado pelo Tauri v2
+document.querySelector(".logout-btn").addEventListener("click", async (e) => {
+  const botao = e.target;
+
+  if (botao.innerText === "Sair") {
+    botao.innerText = "Confirma?";
+
+    // Volta ao texto normal após 3 segundos se o usuário desistir de clicar novamente
+    setTimeout(() => {
+      if (botao && botao.innerText === "Confirma?") {
+        botao.innerText = "Sair";
+      }
+    }, 3000);
+    return;
+  }
+
+  if (botao.innerText === "Confirma?") {
+    botao.innerText = "Sair";
     if (supabase) await supabase.auth.signOut();
     renderizarTelaLogin(() => {
       carregarTela("dashboard");
